@@ -2,7 +2,7 @@ use std::fs;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let instructions = fs::read_to_string("input1.txt")?;
+    let instructions = fs::read_to_string("input.txt")?;
     let lines = instructions.lines();
     let mut pos: i32 = 50;
     let mut counter_part1: i32 = 0;
