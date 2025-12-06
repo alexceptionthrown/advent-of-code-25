@@ -23,13 +23,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             let mut candidates: Vec<&str> = vec!();
             for char in num_str.as_bytes() {
                 let mut updated_candidates: Vec<&str> = vec!();
-                for candidate in candidates{
+                for candidate in candidates {
                     if *char == (candidate.as_bytes()[(current_len % candidate.len() as u32) as usize]) {
                         updated_candidates.push(candidate);
                     }
                 }
                 candidates = updated_candidates;
-                if current_len < (num_str.len() as u32)/2{
+                if current_len < (num_str.len() as u32)/2 && (current_len < 1 || num_str.len() as u32 % (current_len + 1) == 0) {
                     candidates.push(&num_str[0..((current_len+1) as usize)]);
                 }
                 current_len+=1;
