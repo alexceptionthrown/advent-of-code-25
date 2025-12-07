@@ -16,39 +16,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn compute_max_joltage(available_batteries: &str, max_usable_batteries: usize) -> u64 {
-    let mut current_best_batteries: Vec<Option<u32>> = vec![None; max_usable_batteries];
+    let mut current_best_batteries: Vec<u32> = Vec::with_capacity(max_usable_batteries);
     let mut current_len = 0;
     for char in available_batteries.chars() {
         let val: u32 = char.to_digit(10).unwrap();
         let mut assigned = false;
-        let mut i = max(0, -(available_batteries.len() as i32) + current_len + current_best_batteries.len() as i32);
-        while !assigned && i < current_best_batteries.len() as i32 {
-            assigned = assigned_if_better(&mut current_best_batteries[i as usize], val);
-            i += 1;
-        }
-        if assigned {
-            for j in i..current_best_batteries.len() as i32 {
-                current_best_batteries[j as usize] = None
+        let mut i: usize = max(0, -(available_batteries.len() as i32) + current_len + max_usable_batteries as i32) as usize;
+        while !assigned && i < max_usable_batteries {
+            if current_best_batteries.len() <= i || current_best_batteries[i] < val{
+                current_best_batteries.truncate(i );
+                current_best_batteries.push(val);
+                assigned = true;
             }
+            i += 1;
         }
         // reset for next loop
         current_len += 1;
     }
-    let chosen_combo: String = current_best_batteries.iter().fold("".to_string(), |acc, e| acc + &e.unwrap().to_string());
+    let chosen_combo: String = current_best_batteries.iter().fold("".to_string(), |acc, e| acc + &e.to_string());
     chosen_combo.parse::<u64>().unwrap()
-}
-
-fn assigned_if_better(stored_val: &mut Option<u32>, val: u32) -> bool {
-    match *stored_val {
-        None => {
-            *stored_val = Some(val);
-            true
-        },
-        Some(x) => if val > x {
-            *stored_val = Some(val);
-            true
-        } else {
-            false
-        }
-    }
 }
