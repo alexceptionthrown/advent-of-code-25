@@ -2,19 +2,21 @@ use std::fs;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut counter_part1: i32 = 0;
+    let mut accessible_counter: i32 = 0;
     let instructions = fs::read_to_string("input.txt")?;
     let lines = instructions.lines();
     let grid: Vec<Vec<char>> = lines.map(|line| line.chars().collect()).collect();
-    let height=  grid.len();
-    let width = grid[0].len();
 
-    for y in 0..height {
-        for x in 0..width {
-            counter_part1 += is_accessible(y, x, width, height, &grid);
-        }
+    let mut grid = compute_next_grid(&grid, &mut accessible_counter);
+    println!("Solution part 1: {accessible_counter}");
+
+    let mut counter_current_iter = accessible_counter;
+    while counter_current_iter != 0 {
+        counter_current_iter = 0;
+        grid = compute_next_grid(&grid, &mut counter_current_iter);
+        accessible_counter += counter_current_iter;
     }
-    println!("Solution part 1: {counter_part1}");
+    println!("Solution part 2: {accessible_counter}");
     Ok(())
 }
 
@@ -27,7 +29,9 @@ fn print_grid(grid: Vec<Vec<char>>) -> () {
     }
 }
 
-fn is_accessible(y: usize, x: usize, width: usize, height: usize, grid: &Vec<Vec<char>>) -> i32 {
+fn is_accessible(y: usize, x: usize, grid: &Vec<Vec<char>>) -> bool {
+    let height = grid.len();
+    let width = grid[0].len();
     if (*grid)[y][x] == '@' {
         let mut adj_count:i32 = 0;
         for j in -1i32..2{
@@ -43,8 +47,29 @@ fn is_accessible(y: usize, x: usize, width: usize, height: usize, grid: &Vec<Vec
             }
         }
         if adj_count < 4 {
-            return 1;
+            return true;
         }
     }
-    0
+    false
+}
+
+fn compute_next_grid(current_grid: &Vec<Vec<char>>, additional_accessible: &mut i32) -> Vec<Vec<char>> {
+    let mut new_grid: Vec<Vec<char>> = Vec::new();
+    for y in 0..current_grid.len() {
+        let mut line: Vec<char> = Vec::new();
+        for x in 0..current_grid[0].len() {
+            if (*current_grid)[y][x] == '.' {
+                line.push('.');
+            } else {
+                if is_accessible(y, x, current_grid) {
+                    line.push('.');
+                    *additional_accessible += 1;
+                } else {
+                    line.push('@');
+                }
+            }
+        }
+        new_grid.push(line);
+    }
+    new_grid
 }
