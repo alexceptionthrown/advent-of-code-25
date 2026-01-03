@@ -1,55 +1,60 @@
+use std::collections::HashMap;
 use std::fs;
 use std::error::Error;
 
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+struct Coordinate {
+    x: usize,
+    y: usize
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let mut counter_part1: i32 = 0;
-    let instructions = fs::read_to_string("input.txt")?;
+    let instructions = fs::read_to_string("test.txt")?;
     let lines = instructions.lines();
-    let mut grid: Vec<Vec<char>> = lines.map(|line| line.chars().collect()).collect();
+    let grid: Vec<Vec<char>> = lines.map(|line| line.chars().collect()).collect();
+    let s = find_source(&(grid[0]));
 
-    for y in 0..grid.len() {
-        for x in 0..grid[0].len() {
-            let symbol: char = grid[y][x];
-            if symbol == 'S' {
-                safe_grid_modify(y as i32 + 1, x as i32, '|', &mut grid);
-            }
-            if symbol == '|' {
-                if safe_grid_get(y as i32 + 1, x as i32, &grid) == '^' {
-                    safe_grid_modify(y as i32 + 1, x as i32 - 1, '|', &mut grid);
-                    safe_grid_modify(y as i32 + 1, x as i32 + 1, '|', &mut grid);
-                    counter_part1 += 1;
-                } else {
-                    safe_grid_modify(y as i32 + 1, x as i32, '|', &mut grid);
-                }
+    let mut current_line: HashMap<Coordinate, u64> = HashMap::from([(s, 1)]);
+    let mut next_line: HashMap<Coordinate, u64> = HashMap::new();
+
+    for _y in 0..grid.len()-1 {
+        let mut particle_queue: Vec<&Coordinate> = current_line.keys().collect();
+        while !particle_queue.is_empty() {
+            let particle = *particle_queue.pop().unwrap();
+            let num_beams = *current_line.get(&particle).unwrap();
+            if grid[particle.y + 1][particle.x] == '^' {
+                counter_part1 += 1;
+                split_safely(particle, num_beams, &mut next_line, &grid);
+            } else {
+                let lower_particle = Coordinate {
+                    x: particle.x,
+                    y: particle.y + 1
+                };
+                next_line.insert(lower_particle, num_beams);
             }
         }
+        current_line = next_line;
+        next_line = HashMap::new();
     }
-    println!("Solution part 1: {counter_part1}");
+    let counter_part2 = current_line.into_values().reduce(|acc, e| acc + e).unwrap();
+    println!("Solution part 1: {counter_part1}\nSolution part 2: {counter_part2}");
     Ok(())
 }
 
-fn print_grid(grid: &Vec<Vec<char>>) -> () {
-    for line in grid {
-        for char in line {
-            print!("{char}")
-        }
-        print!("\n")
-    }
-    print!("\n")
+fn find_source(start_line: &Vec<char>) -> Coordinate {
+    Coordinate { x: start_line.iter().position(|&char| char == 'S').unwrap(), y: 0 }
 }
 
-fn safe_grid_modify(y: i32, x: i32, value: char, grid: &mut Vec<Vec<char>>) -> () {
-    if 0 <= y && y < grid.len() as i32 && 0 <= x && y < grid.len() as i32 {
-        if (*grid)[y as usize][x as usize] == '.' {
-            (*grid)[y as usize][x as usize] = value
-        }
-    }
-}
-
-fn safe_grid_get(y: i32, x: i32, grid: &Vec<Vec<char>>) -> char {
-    if 0 <= y && y < grid.len() as i32 && 0 <= x && y < grid.len() as i32 {
-        (*grid)[y as usize][x as usize]
-    } else {
-        '#'
+fn split_safely(particle: Coordinate, num_beams: u64, next_line: &mut HashMap<Coordinate, u64>, grid: &Vec<Vec<char>>) -> () {
+    for x_diff in (-1..2).step_by(2) {
+        let new_x = particle.x as i32 + x_diff;
+        if 0 <= new_x && new_x < grid[0].len() as i32 && grid[particle.y+1][new_x as usize] == '.' {
+            let new_coord = Coordinate{x: new_x as usize, y: particle.y + 1};
+            match next_line.get(&new_coord) {
+                None => {next_line.insert(new_coord, num_beams);},
+                Some(_) => *next_line.get_mut(&new_coord).unwrap() += num_beams
+            }
+        } 
     }
 }
