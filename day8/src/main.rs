@@ -48,10 +48,23 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         i += 1;
     }
-    let mut circuit_lengths: Vec<usize> = circuits.into_iter().map(|circuit| circuit.boxes.len()).collect();
+    let mut circuit_lengths: Vec<usize> = circuits.iter().map(|circuit| circuit.boxes.len()).collect();
     circuit_lengths.sort();
     let counter_part1 = circuit_lengths.iter().rev().take(3).cloned().reduce(|acc, e| acc * e).unwrap();
     println!("Solution part 1: {counter_part1}");
+    let mut last_pair_opt: Option<JunctionBoxPair> = None;
+    while circuits.len() > 1  {
+        let pair = sorted_pairs.pop().unwrap();
+        if box_to_circuit[pair.box1] != box_to_circuit[pair.box2] {
+            merge_circuits(&pair, &mut box_to_circuit, &mut circuits);
+        }
+        if circuits.len() == 1 {
+            last_pair_opt = Some(pair)
+        }
+    }
+    let last_pair = last_pair_opt.unwrap();
+    let counter_part2 = last_pair.box1.x * last_pair.box2.x;
+    println!("Solution part 2: {counter_part2}");
     Ok(())
 }
 
