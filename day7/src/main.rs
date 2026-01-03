@@ -10,7 +10,7 @@ struct Coordinate {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut counter_part1: i32 = 0;
-    let instructions = fs::read_to_string("test.txt")?;
+    let instructions = fs::read_to_string("input.txt")?;
     let lines = instructions.lines();
     let grid: Vec<Vec<char>> = lines.map(|line| line.chars().collect()).collect();
     let s = find_source(&(grid[0]));
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     x: particle.x,
                     y: particle.y + 1
                 };
-                next_line.insert(lower_particle, num_beams);
+                insert_or_merge_beam(&lower_particle, num_beams, &mut next_line);
             }
         }
         current_line = next_line;
@@ -51,10 +51,14 @@ fn split_safely(particle: Coordinate, num_beams: u64, next_line: &mut HashMap<Co
         let new_x = particle.x as i32 + x_diff;
         if 0 <= new_x && new_x < grid[0].len() as i32 && grid[particle.y+1][new_x as usize] == '.' {
             let new_coord = Coordinate{x: new_x as usize, y: particle.y + 1};
-            match next_line.get(&new_coord) {
-                None => {next_line.insert(new_coord, num_beams);},
-                Some(_) => *next_line.get_mut(&new_coord).unwrap() += num_beams
-            }
+            insert_or_merge_beam(&new_coord, num_beams, next_line);
         } 
+    }
+}
+
+fn insert_or_merge_beam(coordinate: &Coordinate, num_beams: u64, next_line: &mut HashMap<Coordinate, u64>) -> () {
+    match next_line.get(&coordinate) {
+        None => {next_line.insert(*coordinate, num_beams);},
+        Some(_) => *next_line.get_mut(&coordinate).unwrap() += num_beams
     }
 }
