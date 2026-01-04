@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::error::Error;
+use std::rc::Rc;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 struct JunctionBox {
@@ -25,22 +26,25 @@ struct JunctionBoxPair<'a> {
     distance: f64
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash)]
 struct Circuit {
-    boxes: Vec<JunctionBox>
+    boxes: Vec<JunctionBox> 
+    // Note: could also change to Vec<Rc<JunctionBox>> to avoid cloning and copying junction boxes. 
+    // Then it would make sense for Pair to use Rc as well
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let instructions = fs::read_to_string("input.txt")?;
     let junction_boxes: Vec<JunctionBox> = instructions.lines().map(|line| parse_junction_box(line)).collect();
     let mut sorted_pairs = build_sorted_junction_pairs(&junction_boxes);
-    let mut circuits: HashSet<Circuit>= junction_boxes.iter().map(|&junction_box| Circuit{boxes: vec![junction_box]}).collect();
-    let mut box_to_circuit: HashMap<JunctionBox, Circuit> = circuits
+    let mut circuits: HashSet<Rc<Circuit>>= junction_boxes.iter().map(|&junction_box| Rc::new(Circuit{boxes: vec![junction_box]})).collect();
+    let mut box_to_circuit: HashMap<JunctionBox, Rc<Circuit>> = circuits
         .iter()
-        .map(|circuit| (*circuit.boxes.first().unwrap(), circuit.clone()))
+        .map(|circuit_rc| (*circuit_rc.boxes.first().unwrap(), circuit_rc.clone()))
         .collect();
     const MAX_CABLES: u32 = 1000;
     let mut i: u32 = 0;
+
     while i < MAX_CABLES  {
         let pair = sorted_pairs.pop().unwrap();
         if box_to_circuit[pair.box1] != box_to_circuit[pair.box2] {
@@ -52,6 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     circuit_lengths.sort();
     let counter_part1 = circuit_lengths.iter().rev().take(3).cloned().reduce(|acc, e| acc * e).unwrap();
     println!("Solution part 1: {counter_part1}");
+
     let mut last_pair_opt: Option<JunctionBoxPair> = None;
     while circuits.len() > 1  {
         let pair = sorted_pairs.pop().unwrap();
@@ -92,18 +97,18 @@ fn build_sorted_junction_pairs<'a>(junction_boxes: &'a Vec<JunctionBox>) -> Vec<
     pairs
 }
 
-fn merge_circuits(pair: &JunctionBoxPair, box_to_circuit: &mut HashMap<JunctionBox, Circuit>, circuits: &mut HashSet<Circuit>) {
-    let circuit1 = &box_to_circuit[pair.box1].clone();
-    let circuit2 = &box_to_circuit[pair.box2].clone();
+fn merge_circuits(pair: &JunctionBoxPair, box_to_circuit: &mut HashMap<JunctionBox, Rc<Circuit>>, circuits: &mut HashSet<Rc<Circuit>>) {
+    let circuit1 = box_to_circuit[pair.box1].clone();
+    let circuit2 = box_to_circuit[pair.box2].clone();
     let mut new_boxes = circuit1.boxes.clone();
     new_boxes.extend(circuit2.boxes.clone());
-    let new_circuit = Circuit {
+    let new_circuit_rc = Rc::new(Circuit {
         boxes: new_boxes
-    };
-    for junction_box in &new_circuit.boxes {
-        box_to_circuit.insert(*junction_box, new_circuit.clone());
+    });
+    for junction_box in &new_circuit_rc.boxes {
+        box_to_circuit.insert(*junction_box, new_circuit_rc.clone());
     }
-    circuits.remove(circuit1);
-    circuits.remove(circuit2);
-    circuits.insert(new_circuit);
+    circuits.remove(&circuit1);
+    circuits.remove(&circuit2);
+    circuits.insert(new_circuit_rc);
 }
